@@ -1,3 +1,5 @@
+[[thumbnail.png]]
+
 # 🐻🐻‍❄️ Brown Course Manager (a.k.a. "C@B 2.0")
 A [Node.js](https://nodejs.org/en/download) script developed over like 3 hours that catalogues and checks availability for courses at Brown University. Intended to help manage course mapping, alongside [C@B](https://cab.brown.edu/) for exploration and the [Bulletin](https://bulletin.brown.edu/) for in-depth information. PRs and issues welcome!
 
