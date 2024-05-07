@@ -33,8 +33,8 @@ function parseSemID(input) {
     let mod;
     if(labelInfo[0] == "Summer")      mod = 0;
     else if(labelInfo[0] == "Fall")   mod = 10;
-    else if(labelInfo[0] == "Winter") mod = 15;
-    else if(labelInfo[0] == "Spring") mod = 20;
+    else if(labelInfo[0] == "Winter") mod = -85;
+    else if(labelInfo[0] == "Spring") mod = -80;
     else {
         failed = true;
         console.log("Oops! Your input did not contain any semester keywords. Please try again.");
@@ -103,6 +103,7 @@ function addCourseToFavorites(data, courseInput) {
 function addCoursesToFavorites(data, pathInput) {
     fs.readFile('favorites.json', async function (jsonErr, jsonData) {
         let json = JSON.parse(jsonData);
+        let lines = 0;
 
         const courseStream = readline.createInterface({
             input: fs.createReadStream(pathInput)
@@ -114,12 +115,14 @@ function addCoursesToFavorites(data, pathInput) {
                 let match = data["results"].find((course) => course["code"] == words[0] + " " + words[1]);
         
                 if(match) {
+                    lines++;
                     json["courses"].push(match);
                 }
             } else if(!isNaN(courseInput)) { // Based on CRN
                 let match = data["results"].find((course) => course["crn"] == courseInput);
         
                 if(match) {
+                    lines++;
                     json["courses"].push(match);
                 }
             } else {
@@ -129,6 +132,7 @@ function addCoursesToFavorites(data, pathInput) {
         });
         courseStream.on('close', () => {
             fs.writeFileSync("favorites.json", JSON.stringify(json));
+            console.log(`${lines} courses saved!\n`);
             userInput();
         })
     });
@@ -248,6 +252,7 @@ function userInput() {
                             if(data["fatal"]) {
                                 console.log(`Error encountered requesting Brown's course list (is your semester correct?): "${data["fatal"]}"`);
                                 userInput();
+                                return;
                             }
                             
                             fs.readFile('favorites.json', async function (jsonErr, jsonData) {
@@ -263,11 +268,11 @@ function userInput() {
 
                                 console.log(`${chalk.green("Courses repeated:")}`);
                                 for(let courseFound in coursesFound) {
-                                    console.log(`+ ${coursesFound[courseFound]["code"]} (${coursesFound[courseFound]["title"]})`);
+                                    console.log(`+ ${chalk.green(coursesFound[courseFound]["code"])} (${coursesFound[courseFound]["title"]})`);
                                 }
                                 console.log(`\n\n${chalk.red("Courses not found:")}`);
                                 for(let courseMissed in coursesMissed) {
-                                    console.log(`- ${coursesMissed[courseMissed]["code"]} (${coursesMissed[courseMissed]["title"]})`);
+                                    console.log(`- ${chalk.red(coursesMissed[courseMissed]["code"])} (${coursesMissed[courseMissed]["title"]})`);
                                 }
                                 console.log("\n");
                                 userInput();
