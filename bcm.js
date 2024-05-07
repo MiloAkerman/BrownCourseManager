@@ -10,10 +10,15 @@ const rl = readline.createInterface({
 
 // STARTUP SPLASH
 console.log(
-    chalk.red("+------------------------+\n") +
-    chalk.red("|") +  chalk.italic("  BROWN COURSE MANAGER  ") + chalk.red("|\n") +
-    chalk.red("|") +  chalk.italic("  By: Milo (@onemilon)  ") + chalk.red("|\n") +
-    chalk.red("+------------------------+\n")
+    chalk.red(`
+    ______                           _____                            ___  ___                                  
+    | ___ \\                         /  __ \\                           |  \\/  |                                  
+    | |_/ /_ __ _____      ___ __   | /  \\/ ___  _   _ _ __ ___  ___  | .  . | __ _ _ __   __ _  __ _  ___ _ __ 
+    | ___ \\ '__/ _ \\ \\ /\\ / / '_ \\  | |    / _ \\| | | | '__/ __|/ _ \\ | |\\/| |/ _\` | '_ \\ / _\` |/ _\` |/ _ \\ '__|
+    | |_/ / | | (_) \\ V  V /| | | | | \\__/\\ (_) | |_| | |  \\__ \\  __/ | |  | | (_| | | | | (_| | (_| |  __/ |   
+    \\____/|_|  \\___/ \\_/\\_/ |_| |_|  \\____/\\___/ \\__,_|_|  |___/\\___| \\_|  |_/\\__,_|_| |_|\\__,_|\\__, |\\___|_|   
+                                                                                                 __/ |          \n    `) 
+    + chalk.bgRed("By: Milo (@onemilon)") + chalk.red(`                                                                        |___/           \n`)
 );
 
 // HELPERS
@@ -33,9 +38,7 @@ function parseSemID(input) {
     else {
         failed = true;
         console.log("Oops! Your input did not contain any semester keywords. Please try again.");
-        rl.question(`Enter ${chalk.cyan("semester ID")} or label: `, (semesterInput)=>{
-            return parseSemID(semesterInput);
-        });
+        userInput();
     }
 
     if(!failed) {
@@ -49,10 +52,12 @@ function displayHelp() {
         chalk.dim("———————————————————————————————————————————————————————————\n") +
         "Commands available:\n" + 
         "Help — Display this message\n" +
-        "1 — Add Course to Favorites\n" +
-        "2 — Remove Course from Favorites\n" +
-        "3 — Add Courses from File to Favorites\n" +
-        "4 — Check Favorites Availability in Semester\n" +
+        chalk.italic("1 — Add Course to Favorites\n") +
+        chalk.italic("2 — Add Courses from File to Favorites\n") +
+        chalk.italic("3 — Remove Course from Favorites\n") +
+        chalk.italic("4 — Clear all Courses from Favorites\n") +
+        chalk.italic("5 — Check Favorites Availability in Semester\n") +
+        chalk.italic("6 — List Favorite Courses\n") +
         chalk.dim("———————————————————————————————————————————————————————————\n")
     );
 }
@@ -60,45 +65,39 @@ function displayHelp() {
 
 // TODO: improve using courses sample
 function addCourseToFavorites(data, courseInput) {
-    if(courseInput.includes(" ")) {
-        // Course might be a code?
+    fs.readFile('favorites.json', function (jsonErr, jsonData) {
+        let json = JSON.parse(jsonData)
 
-        let words = courseInput.split(" ");
-        let match = data["results"].find((course) => course["code"] == words[0] + " " + words[1]);
-
-        if(match) {
-            fs.readFile('favorites.json', function (jsonErr, jsonData) {
-                let json = JSON.parse(jsonData)
+        if(courseInput.includes(" ")) { // Based on code
+            let words = courseInput.split(" ");
+            let match = data["results"].find((course) => course["code"] == words[0] + " " + words[1]);
+    
+            if(match) {
                 json["courses"].push(match);
-                fs.writeFileSync("favorites.json", JSON.stringify(json))
+                fs.writeFileSync("favorites.json", JSON.stringify(json));
+                console.log("Added!\n");
                 userInput();
-            });
-            console.log("Added!\n");
+            } else {
+                console.log("No match found for course code! Please try again.\n");
+                userInput();
+            }
+        } else if(!isNaN(courseInput)) { // Based on CRN
+            let match = data["results"].find((course) => course["crn"] == courseInput);
+    
+            if(match) {
+                json["courses"].push(match);
+                fs.writeFileSync("favorites.json", JSON.stringify(json));
+                console.log("Added!\n");
+                userInput();
+            } else {
+                console.log("No match found for course CRN! Please try again.\n");
+                userInput();
+            }
         } else {
-            console.log("No match found for course code! Please try again.\n");
+            console.log("Course format not recognized!\n");
             userInput();
         }
-    } else if(!isNaN(courseInput)) {
-        // Course is a CRN
-
-        let match = data["results"].find((course) => course["crn"] == courseInput);
-
-        if(match) {
-            fs.readFile('favorites.json', function (jsonErr, jsonData) {
-                let json = JSON.parse(jsonData)
-                json["courses"].push(match);
-                fs.writeFileSync("favorites.json", JSON.stringify(json))
-                userInput();
-            });
-            console.log("Added!\n");
-        } else {
-            console.log("No match found for course CRN! Please try again.\n");
-            userInput();
-        }
-    } else {
-        console.log("Course format not recognized!\n");
-        userInput();
-    }
+    });
 }
 
 function addCoursesToFavorites(data, pathInput) {
@@ -110,29 +109,71 @@ function addCoursesToFavorites(data, pathInput) {
         });
 
         courseStream.on('line', function(courseInput) {
-            if(courseInput.includes(" ")) {
-                // Course might be a code?
-        
+            if(courseInput.includes(" ")) { // Based on code
                 let words = courseInput.split(" ");
                 let match = data["results"].find((course) => course["code"] == words[0] + " " + words[1]);
         
                 if(match) {
                     json["courses"].push(match);
                 }
-            } else if(!isNaN(courseInput)) {
-                // Course is a CRN
-        
+            } else if(!isNaN(courseInput)) { // Based on CRN
                 let match = data["results"].find((course) => course["crn"] == courseInput);
         
                 if(match) {
                     json["courses"].push(match);
                 }
+            } else {
+                console.log("Course format not recognized!\n");
+                userInput();
             }
         });
         courseStream.on('close', () => {
             fs.writeFileSync("favorites.json", JSON.stringify(json));
             userInput();
         })
+    });
+}
+
+function removeCourseFromFavorites(courseInput) {
+    fs.readFile('favorites.json', async function (jsonErr, jsonData) {
+        let json = JSON.parse(jsonData);
+
+        if(courseInput.includes(" ")) { // Based on code
+            let words = courseInput.split(" ");
+            let filteredList = json["courses"].filter((course) => course["code"] != words[0] + " " + words[1]);
+            let filteredJson = { courses: filteredList };
+
+            if(filteredJson["courses"].length == json["courses"].length) console.log(`Unable to find ${chalk.green("course code")} in favorites. Please try again.\n`);
+            else {
+                fs.writeFileSync("favorites.json", JSON.stringify(filteredJson));
+                console.log("Course removed successfully!\n");
+            }
+        } else if(!isNaN(courseInput)) { // Based on CRN
+            let filteredList = json["courses"].filter((course) => course["crn"] != courseInput);
+            let filteredJson = { courses: filteredList };
+
+            if(filteredJson["courses"].length == json["courses"].length) console.log(`Unable to find ${chalk.yellow("CRN")} in favorites. Please try again.\n`);
+            else {
+                fs.writeFileSync("favorites.json", JSON.stringify(filteredJson));
+                console.log("Course removed successfully!\n");
+            }
+        } else {
+            console.log("Course format not recognized!\n");
+        }
+        userInput();
+    });
+}
+
+function printFavorites() {
+    fs.readFile('favorites.json', async function (jsonErr, jsonData) {
+        let json = JSON.parse(jsonData);
+
+        console.log("Favorite courses:")
+        for(const course in json["courses"]) {
+            console.log(`☆ ${chalk.yellow("[" + json['courses'][course]['crn'] + "]")} ${json["courses"][course]["code"]} (${json["courses"][course]["title"]})`)
+        }
+        console.log();
+        userInput();
     });
 }
 
@@ -145,10 +186,13 @@ function userInput() {
         if(command == "exit") {
             rl.close();
         } else {
-            if(command == "help") displayHelp();
+            if(command == "help") {
+                displayHelp();
+                userInput();
+            }
 
             // Add courses to favorites
-            else if(command == "1" || command == "3") {
+            else if(command == "1" || command == "2") {
                 rl.question(`Enter ${chalk.cyan("semester ID")} or label: `, (semesterInput)=>{
                     let semID = parseSemID(semesterInput);
 
@@ -162,7 +206,7 @@ function userInput() {
                                 console.log(`Error encountered requesting Brown's course list (is your semester correct?): "${data["fatal"]}"`);
                                 userInput();
                             }
-                            else if(command == 1) {
+                            else if(command == "1") {
                                 rl.question(`Enter ${chalk.yellow("course CRN")} or ${chalk.green("course code")}: `, (courseInput)=>{
                                     addCourseToFavorites(data, courseInput, true);
                                 })
@@ -175,14 +219,23 @@ function userInput() {
                         .catch((err) => {
                             console.log(`Error encountered requesting Brown's course list (is your semester correct?): ${err}`);
                             userInput();
-                        })
+                        });
                 });
 
             // Remove courses from favorites
-            } else if(command == "2") {
+            } else if(command == "3") {
+                rl.question(`Enter ${chalk.yellow("course CRN")} or ${chalk.green("course code")}: `, (courseInput)=>{
+                    removeCourseFromFavorites(courseInput);
+                });
+
+            // Clear favorites list
+            } else if(command == "4") {
+                fs.writeFileSync("favorites.json", "{\"courses\": []}");
+                console.log("All courses removed!\n");
+                userInput();
 
             // Check favorites availability
-            } else if(command == "4") {
+            } else if(command == "5") {
                 rl.question(`Enter ${chalk.cyan("semester ID")} or label: `, (semesterInput)=>{
                     let semID = parseSemID(semesterInput);
 
@@ -225,6 +278,10 @@ function userInput() {
                             userInput();
                         })
                 });
+
+            // Print user favorites
+            } else if(command == "6") {
+                printFavorites();
             }
             //...
             else { 
